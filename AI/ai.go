@@ -8,8 +8,13 @@ import (
 	"strings"
 )
 
-// Promt - функция для общения с ии. Мы передаем промт и получаем ответ. Все
-func Promt(promt, sysPromt, api string) (string, error) {
+// Promt - функция для общения с ии. Мы передаем промт и получаем ответ. Включает параметы:
+// user - тот кто пишет
+// promt - сообщение для ии
+// sysPromt - системное сообщение для бота
+// api - апи ключ для бота
+func Promt(user, promt, sysPromt, api string) (string, error) {
+	UserPromt := "Тебе написал " + user + ": " + promt
 	var response map[string]interface{}
 	url := "https://api.intelligence.io.solutions/api/v1/chat/completions"
 
@@ -22,7 +27,7 @@ func Promt(promt, sysPromt, api string) (string, error) {
 		],
 		"temperature": 0.7,
 		"max_tokens": 500
-	}`, sysPromt, promt))
+	}`, sysPromt, UserPromt))
 
 	req, err := http.NewRequest("POST", url, payload)
 	if err != nil {

@@ -1,7 +1,11 @@
 package cmd
 
-import "github.com/bwmarrin/discordgo"
+import (
+	"github.com/bwmarrin/discordgo"
+	"strings"
+)
 
+// GetBotsCommands - функция, возвращающая команды используемые ботом
 func GetBotsCommands() []*discordgo.ApplicationCommand {
 	commands := []*discordgo.ApplicationCommand{
 		{
@@ -34,4 +38,16 @@ func GetBotsCommands() []*discordgo.ApplicationCommand {
 		},
 	}
 	return commands
+}
+
+// MessageForBot определяет, адресованно ли сообщение боту
+func MessageForBot(message string) bool {
+	ToLowerMessage := strings.ToLower(strings.TrimSpace(message))
+	forBot := []string{"дух", "духа", "духу", "духом", "духе"}
+	for _, v := range forBot {
+		if strings.Contains(ToLowerMessage, v) {
+			return true
+		}
+	}
+	return false
 }

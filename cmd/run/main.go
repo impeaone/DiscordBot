@@ -20,6 +20,7 @@ const MyServerId = "537698381527777300"
 // TODO: реализовать базу данных(использование бота, ники сереги), может туда еще логи пихнуть
 func main() {
 	logs := logger.NewLog()
+
 	// Настраиваем переменные среды
 	AIApi := os.Getenv("AI_API_KEY")
 	if AIApi == "" {
@@ -55,24 +56,48 @@ func main() {
 	// Slash-команды
 	commands := cmd.GetBotsCommands()
 
+	// Сообщения из чата
+	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
+		// Игнорируем сообщения от ботов
+		if m.Author.Bot {
+			return
+		}
+		// диалог с духом без слеш-команды
+		if cmd.MessageForBot(m.Content) {
+			AiMessage, _ := AI.Promt(m.Author.GlobalName, m.Content, systemPromt, AIApi)
+			_, err := s.ChannelMessageSend(m.ChannelID, AiMessage)
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
+		}
+	})
+
 	// Обработчик Slash-команд
 	dg.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		cmds := i.ApplicationCommandData()
 		switch cmds.Name {
 		case "ping":
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Я обитаю независимо от твоего понимания. Ну вроде пишу тебе хуйню какую-то.",
 				},
 			})
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
+
 		case "you":
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Я - великий дух сервера 'не придумал', я меняю ник сереге, потому что на него сошла моя кара.",
 				},
 			})
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
+
 		case "kara":
 			// Указываем конкретный ID пользователя
 			nicknames := []string{"Лошок", "Опездол", "Чевапчич", "Фидир", "Уебище", "Чушпан",
@@ -81,49 +106,62 @@ func main() {
 			userID := "664192938460446730"
 			newNick := "Серега " + nicknames[rand.Intn(lenNicknames-1)]
 
+			// Меняем ник
 			err = s.GuildMemberNickname(i.GuildID, userID, newNick)
 			if err != nil {
-				logs.Warning("Не меняется ник у сереги", logger.GetPlace())
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				logs.Warning(Error.ChangeNicknameError+"\n"+err.Error(), logger.GetPlace())
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content: "Нет вайбика менять ник Сереге пока что",
 					},
 				})
+				if err != nil {
+					logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+				}
 			} else {
-				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
 					Data: &discordgo.InteractionResponseData{
 						Content: fmt.Sprintf("Ник Сереги был изменен на `%s`", newNick),
 					},
 				})
+				if err != nil {
+					logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+					return
+				}
 				logs.Info(fmt.Sprintf("Ник Сереги был изменен на `%s`", newNick), logger.GetPlace())
 			}
+
 		case "time":
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Время по великому духу: " + time.Now().Format("02.01.2006 15:04:05"),
 				},
 			})
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
+
 		case "talk":
 
-			// 1. Немедленный отложенный ответ
+			// Немедленный отложенный ответ (В дискорде появляется сообщение, что бот думает, он ждет ответа)
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
 			})
 			if err != nil {
-				logs.Warning(err.Error(), logger.GetPlace())
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 				return
 			}
 
-			// 2. Асинхронно обрабатываем запрос
+			// Асинхронно обрабатываем запрос
 			go func() {
 				message := cmds.Options[0].StringValue()
-				aiResponse, err := AI.Promt(message, systemPromt, AIApi)
+				aiResponse, err := AI.Promt(i.Member.User.GlobalName, message, systemPromt, AIApi)
 				if err != nil {
 					logs.Warning(err.Error(), logger.GetPlace())
-					aiResponse = "Я чет устал пиздеть, идите нахуй"
+					aiResponse = "Все, Великий дух не хочет общаться"
 				}
 
 				// 3. Отправляем результат
@@ -132,15 +170,19 @@ func main() {
 				})
 				if err != nil {
 					logs.Warning(err.Error(), logger.GetPlace())
+					return
 				}
 			}()
 		default:
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: "Але, фигню мне тут не пиши. А то и на тебя моя кара падет",
 				},
 			})
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
 		}
 	})
 
@@ -150,7 +192,7 @@ func main() {
 		logs.Error(Error.SessionError+"\n"+err.Error(), logger.GetPlace())
 		return
 	}
-	defer dg.Close() // Закрываем соединение при выходе
+	defer dg.Close()
 
 	// Регистрация команд
 	registeredCommands, err := dg.ApplicationCommandBulkOverwrite(dg.State.User.ID, MyServerId, commands)
@@ -161,7 +203,7 @@ func main() {
 	log.Println("Зарегистрированные команды:", registeredCommands)
 
 	// Ждем сигнала завершения (Ctrl+C)
-	fmt.Println("Бот работает. Нажмите Ctrl+C для выхода.")
+	fmt.Println("Бот работает. Ctrl+C для выхода.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc

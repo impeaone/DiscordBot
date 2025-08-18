@@ -11,6 +11,10 @@ const (
 	BotTokenIsEmpty = "Bot-token value in evironment is empty"
 
 	RegisteringCommandsError = "Registering commands error"
+
+	ChannelMessageError = "Create channel message error"
+
+	ChangeNicknameError = "Change nickname error"
 )
 
 //TODO: тут много логов таких сделать надо
