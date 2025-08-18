@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -33,7 +34,9 @@ func (logs *Log) Error(message string, place string) {
 
 func GetPlace() string {
 	_, file, line, _ := runtime.Caller(1)
-	place := file + ":" + strconv.Itoa(line)
+	split := strings.Split(file, "/")
+	StartFile := split[len(split)-1]
+	place := StartFile + ":" + strconv.Itoa(line)
 	return place
 }
 
