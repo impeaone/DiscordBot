@@ -12,3 +12,5 @@ const (
 
 	RegisteringCommandsError = "Registering commands error"
 )
+
+//TODO: тут много логов таких сделать надо

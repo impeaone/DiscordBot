@@ -17,6 +17,7 @@ import (
 
 const MyServerId = "537698381527777300"
 
+// TODO: реализовать базу данных(использование бота, ники сереги), может туда еще логи пихнуть
 func main() {
 	logs := logger.NewLog()
 	// Настраиваем переменные среды
@@ -41,7 +42,6 @@ func main() {
 	// Достаем системный промт
 	file, errFile := os.ReadFile("../../AI/BotsystemPromt.txt")
 	if errFile != nil {
-		//TODO: как каждому error сделать добавление его в базу данных
 		logs.Error(Error.SystemPromtFileDoesNotOpen+"\n"+errFile.Error(), logger.GetPlace())
 		panic(errFile)
 	}
@@ -138,7 +138,7 @@ func main() {
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
-					Content: "Але ебанат, хуйню мне тут не пиши. А то и на тебя моя кара падет",
+					Content: "Але, фигню мне тут не пиши. А то и на тебя моя кара падет",
 				},
 			})
 		}
