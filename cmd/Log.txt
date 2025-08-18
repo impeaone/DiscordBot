@@ -1,0 +1,22 @@
+13:21 18.08.2025
+Level: Info
+Message: Бот запущен как Дух сервера <не придумал>#3264
+
+Place: C:/Users/Vladus/GolandProjects/DiscordBot/cmd/run/main.go:52
+
+13:23 18.08.2025
+Level: Info
+Message: Бот запущен как Дух сервера <не придумал>#3264
+
+Place: C:/Users/Vladus/GolandProjects/DiscordBot/cmd/run/main.go:52
+
+13:24 18.08.2025
+Level: Info
+Message: Бот запущен как Дух сервера <не придумал>#3264
+Place: C:/Users/Vladus/GolandProjects/DiscordBot/cmd/run/main.go:52
+
+18.08.2025 13:49:49
+Level: Info
+Message: Бот запущен как Дух сервера <не придумал>#3264
+Place: C:/Users/Vladus/GolandProjects/DiscordBot/cmd/run/main.go:52
+
