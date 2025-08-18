@@ -1,6 +1,7 @@
 package AI
 
 import (
+	"DiscordBot/cmd"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,7 +14,13 @@ import (
 // promt - сообщение для ии
 // sysPromt - системное сообщение для бота
 // api - апи ключ для бота
-func Promt(user, promt, sysPromt, api string) (string, error) {
+func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter) (string, error) {
+	_, ok := ratelimiter.CheckLimit()
+	if !ok {
+		return user + " не нужно на меня так наседать! Я не скорострел.", nil
+	}
+	ratelimiter.Unlock(user)
+
 	UserPromt := "Тебе написал " + user + ": " + promt
 	var response map[string]interface{}
 	url := "https://api.intelligence.io.solutions/api/v1/chat/completions"

@@ -3,6 +3,7 @@ package main
 import (
 	"DiscordBot/AI"
 	"DiscordBot/cmd"
+	"DiscordBot/databaseMethods"
 	"DiscordBot/pkg/Error"
 	"DiscordBot/pkg/logger/logger"
 	"fmt"
@@ -20,7 +21,14 @@ const MyServerId = "537698381527777300"
 // TODO: реализовать базу данных(использование бота, ники сереги), может туда еще логи пихнуть
 func main() {
 	logs := logger.NewLog()
+	RateLimiter := cmd.NewSimpleRateLimiter("", time.Now()) // Для ИИ от спама, можно писать ИИ раз в 5 секунд
 
+	db, err := databaseMethods.OpenDatabase("../../databaseMethods/database/database.db", logs)
+	if err != nil {
+		logs.Error(err.Error(), logger.GetPlace())
+		return
+	}
+	_ = db
 	// Настраиваем переменные среды
 	AIApi := os.Getenv("AI_API_KEY")
 	if AIApi == "" {
@@ -62,9 +70,9 @@ func main() {
 		if m.Author.Bot {
 			return
 		}
-		// диалог с духом без слеш-команды
+		// Диалог с духом без слеш-команды
 		if cmd.MessageForBot(m.Content) {
-			AiMessage, _ := AI.Promt(m.Author.GlobalName, m.Content, systemPromt, AIApi)
+			AiMessage, _ := AI.Promt(m.Author.GlobalName, m.Content, systemPromt, AIApi, RateLimiter)
 			_, err := s.ChannelMessageSend(m.ChannelID, AiMessage)
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
@@ -158,7 +166,7 @@ func main() {
 			// Асинхронно обрабатываем запрос
 			go func() {
 				message := cmds.Options[0].StringValue()
-				aiResponse, err := AI.Promt(i.Member.User.GlobalName, message, systemPromt, AIApi)
+				aiResponse, err := AI.Promt(i.Member.User.GlobalName, message, systemPromt, AIApi, RateLimiter)
 				if err != nil {
 					logs.Warning(err.Error(), logger.GetPlace())
 					aiResponse = "Все, Великий дух не хочет общаться"
