@@ -1,6 +1,6 @@
-#Discord Bot "Великий Дух"
 ![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
+#Discord Bot "Великий Дух"
 
 Многофункциональный бот для Discord с поддержкой slash-команд
 Это Великий дух, по сюжету он разгневался на пользователя @porosyabiboss и теперь меняет ему никнеймы
