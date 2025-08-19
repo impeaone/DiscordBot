@@ -213,7 +213,6 @@ func main() {
 		panic(Error.RegisteringCommandsError + ": " + err.Error())
 	}
 	log.Println("Зарегистрированные команды:", registeredCommands)
-
 	// Ждем сигнала завершения (Ctrl+C)
 	fmt.Println("Бот работает. Ctrl+C для выхода.")
 	sc := make(chan os.Signal, 1)
