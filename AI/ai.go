@@ -2,11 +2,15 @@ package AI
 
 import (
 	"DiscordBot/cmd"
+	"DiscordBot/pkg/Error"
+	"DiscordBot/pkg/logger/logger"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 )
 
 // Promt - функция для общения с ии. Мы передаем промт и получаем ответ. Включает параметы:
@@ -62,6 +66,23 @@ func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter
 	if err != nil {
 		return "Не хочу тебе отвечать, динаху", err
 	}
+	if response["choices"] == nil {
+		time.Sleep(5 * time.Second)
+		message, err := Promt(user, "иди нахуй дух. Ха-ха я тебе очень сильно нагрубил.", sysPromt, api, ratelimiter)
+		if err != nil {
+			return "", err
+		}
+		return message, nil
+	}
 	content := response["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
 	return content, nil
+}
+
+func GetSystemPromt(path string, logs *logger.Log) (string, error) {
+	file, errFile := os.ReadFile(path)
+	if errFile != nil {
+		logs.Error(Error.SystemPromtFileDoesNotOpen+"\n"+errFile.Error(), logger.GetPlace())
+		return "", errFile
+	}
+	return string(file), nil
 }

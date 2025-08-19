@@ -2,17 +2,20 @@ package databaseMethods
 
 import (
 	"DiscordBot/pkg/logger/logger"
+	"github.com/bwmarrin/discordgo"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"time"
 )
 
-type SergeyNickname struct {
+// Nicknames - таблица изменений никнеймов
+type Nicknames struct {
 	gorm.Model
 	Nickname   string    `gorm:"type:varchar(255);not null"`
 	DateChange time.Time `gorm:"type:datetime;not null"`
 }
 
+// BotUsage - таблица использования бота
 type BotUsage struct {
 	gorm.Model
 	UserGlobalName string    `gorm:"type:varchar(255);not null"`
@@ -20,18 +23,15 @@ type BotUsage struct {
 	DateUsage      time.Time `gorm:"type:datetime;not null"`
 }
 
+// OpenDatabase - подключение к базе данных
 func OpenDatabase(dbPath string, log *logger.Log) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		log.Error("ошибка базы данных", logger.GetPlace())
 		return nil, err
 	}
-	defer func() {
-		sqlDB, _ := db.DB()
-		sqlDB.Close()
-	}()
-	if !db.Migrator().HasTable(&SergeyNickname{}) {
-		err = db.AutoMigrate(&SergeyNickname{})
+	if !db.Migrator().HasTable(&Nicknames{}) {
+		err = db.AutoMigrate(&Nicknames{})
 		if err != nil {
 			log.Error("Ошибка создания таблицы SergeyNicknames", logger.GetPlace())
 			return nil, err
@@ -45,4 +45,24 @@ func OpenDatabase(dbPath string, log *logger.Log) (*gorm.DB, error) {
 		}
 	}
 	return db, nil
+}
+
+// ChangeNickname - Смена ника Сереге
+func ChangeNickname(s *discordgo.Session, GuildId, ChannelId, UserId, newNickname string, db *gorm.DB, logs *logger.Log) {
+	db.Create(&Nicknames{
+		Nickname:   newNickname,
+		DateChange: time.Now(),
+	})
+	s.GuildMemberNickname(GuildId, UserId, newNickname)
+	s.ChannelMessageSend(ChannelId, "Ник Сереги был изменен на "+newNickname)
+	logs.Info("Ник Сереги успешно изменен на "+newNickname, logger.GetPlace())
+}
+
+func DBNewAction(User, Message string, db *gorm.DB, logs *logger.Log) {
+	db.Create(&BotUsage{
+		UserGlobalName: User,
+		Command:        Message,
+		DateUsage:      time.Now(),
+	})
+	logs.Info(User+" использовал команду <"+Message+">", logger.GetPlace())
 }

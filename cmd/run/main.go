@@ -4,6 +4,7 @@ import (
 	"DiscordBot/AI"
 	"DiscordBot/cmd"
 	"DiscordBot/databaseMethods"
+	"DiscordBot/pkg/Constants"
 	"DiscordBot/pkg/Error"
 	"DiscordBot/pkg/logger/logger"
 	"fmt"
@@ -16,18 +17,27 @@ import (
 	"time"
 )
 
-const MyServerId = "537698381527777300"
-
-// TODO: реализовать базу данных(использование бота, ники сереги), может туда еще логи пихнуть
+// TODO: реализовать базу данных(использование бота, ники сереги)
 func main() {
+	//Логи
 	logs := logger.NewLog()
+	// Объявляем RateLimiter для общения с духом
 	RateLimiter := cmd.NewSimpleRateLimiter("", time.Now()) // Для ИИ от спама, можно писать ИИ раз в 5 секунд
-
-	db, err := databaseMethods.OpenDatabase("../../databaseMethods/database/database.db", logs)
+	// Получаем никнеймы из txt
+	nicknames, _ := cmd.GetNicknames(Constants.PathToNicknamestxt, logs)
+	// Достаем системный промт
+	systemPromt, _ := AI.GetSystemPromt(Constants.PathToBotSystemtxt, logs)
+	// Подключаемся к бд
+	db, err := databaseMethods.OpenDatabase(Constants.PathToDataBasetxt, logs)
 	if err != nil {
 		logs.Error(err.Error(), logger.GetPlace())
 		return
 	}
+	// закрываем соединение с бд
+	defer func() {
+		sqldb, _ := db.DB()
+		sqldb.Close()
+	}()
 	_ = db
 	// Настраиваем переменные среды
 	AIApi := os.Getenv("AI_API_KEY")
@@ -40,21 +50,14 @@ func main() {
 		logs.Error(Error.BotTokenIsEmpty, logger.GetPlace())
 		panic("DISCORD_BOT_TOKEN environment variable not set")
 	}
-
 	// Создаем сессию Discord
 	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
 		logs.Error(Error.SessionError+"\n"+err.Error(), logger.GetPlace())
 		return
 	}
-
-	// Достаем системный промт
-	file, errFile := os.ReadFile("../../AI/BotsystemPromt.txt")
-	if errFile != nil {
-		logs.Error(Error.SystemPromtFileDoesNotOpen+"\n"+errFile.Error(), logger.GetPlace())
-		panic(errFile)
-	}
-	systemPromt := string(file)
+	// запуск функции, которая каждые два дня меняет никнеймы сереге
+	go cmd.NicknamesChanger(dg, cmd.SergeyId, nicknames, db, logs)
 
 	// Обработчик события "готовности" бота
 	dg.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
@@ -91,6 +94,7 @@ func main() {
 					Content: "Я обитаю независимо от твоего понимания. Ну вроде пишу тебе хуйню какую-то.",
 				},
 			})
+			databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 			}
@@ -102,18 +106,14 @@ func main() {
 					Content: "Я - великий дух сервера 'не придумал', я меняю ник сереге, потому что на него сошла моя кара.",
 				},
 			})
+			databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 			}
 
 		case "kara":
-			// Указываем конкретный ID пользователя
-			nicknames := []string{"Лошок", "Опездол", "Чевапчич", "Фидир", "Уебище", "Чушпан",
-				"Пипипупу", "Черкашок", "Тупик", "3070м", "Глупи"}
-			lenNicknames := len(nicknames)
-			userID := "664192938460446730"
-			newNick := "Серега " + nicknames[rand.Intn(lenNicknames-1)]
-
+			userID := cmd.SergeyId
+			newNick := nicknames[rand.Intn(len(nicknames))]
 			// Меняем ник
 			err = s.GuildMemberNickname(i.GuildID, userID, newNick)
 			if err != nil {
@@ -134,6 +134,8 @@ func main() {
 						Content: fmt.Sprintf("Ник Сереги был изменен на `%s`", newNick),
 					},
 				})
+				databaseMethods.ChangeNickname(s, cmd.MyServerId, cmd.TextChannelID, userID, newNick, db, logs)
+				databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
 				if err != nil {
 					logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 					return
@@ -148,6 +150,7 @@ func main() {
 					Content: "Время по великому духу: " + time.Now().Format("02.01.2006 15:04:05"),
 				},
 			})
+			databaseMethods.DBNewAction(i.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 			}
@@ -176,6 +179,8 @@ func main() {
 				_, err = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 					Content: aiResponse,
 				})
+				// заносим событие в базу данных
+				databaseMethods.DBNewAction(i.Member.User.Username, cmds.Name+" "+message, db, logs) // заносим событие в базу данных
 				if err != nil {
 					logs.Warning(err.Error(), logger.GetPlace())
 					return
@@ -203,7 +208,7 @@ func main() {
 	defer dg.Close()
 
 	// Регистрация команд
-	registeredCommands, err := dg.ApplicationCommandBulkOverwrite(dg.State.User.ID, MyServerId, commands)
+	registeredCommands, err := dg.ApplicationCommandBulkOverwrite(dg.State.User.ID, cmd.MyServerId, commands)
 	if err != nil {
 		logs.Warning(Error.RegisteringCommandsError+": "+err.Error(), logger.GetPlace())
 		panic(Error.RegisteringCommandsError + ": " + err.Error())
