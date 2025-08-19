@@ -54,7 +54,6 @@ func ChangeNickname(s *discordgo.Session, GuildId, ChannelId, UserId, newNicknam
 		DateChange: time.Now(),
 	})
 	s.GuildMemberNickname(GuildId, UserId, newNickname)
-	s.ChannelMessageSend(ChannelId, "Ник Сереги был изменен на "+newNickname)
 	logs.Info("Ник Сереги успешно изменен на "+newNickname, logger.GetPlace())
 }
 

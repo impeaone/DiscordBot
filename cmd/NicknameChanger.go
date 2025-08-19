@@ -66,7 +66,7 @@ func NicknamesChanger(s *discordgo.Session, UserId string, Nicknames []string, d
 
 // GetNicknames - получает из txt файла никнеймы сереги
 func GetNicknames(path string, logs *logger.Log) ([]string, error) {
-	file, err := os.Open(path)
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
 	if err != nil {
 		logs.Error("Nicknames File is not exist", logger.GetPlace())
 		return nil, err

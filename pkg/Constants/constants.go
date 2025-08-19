@@ -1,5 +1,7 @@
 package Constants
 
-const PathToNicknamestxt = "../../AI/Nicknames.txt"
-const PathToBotSystemtxt = "../../AI/BotsystemPromt.txt"
-const PathToDataBasetxt = "../../databaseMethods/database/database.db"
+import "path/filepath"
+
+var PathToNicknamestxt = filepath.Join("..", "..", "AI", "Nicknames.txt")
+var PathToBotSystemtxt = filepath.Join("..", "..", "AI", "BotsystemPromt.txt")
+var PathToDataBasetxt = filepath.Join("..", "..", "databaseMethods", "database", "database.db")

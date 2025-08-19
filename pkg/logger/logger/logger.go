@@ -42,7 +42,7 @@ func GetPlace() string {
 
 func WriteLogsToFile(LogText string) {
 	file, err := os.OpenFile(
-		"../Log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+		"../Log.txt", os.O_RDWR, 0644)
 	if err != nil {
 		log.Println("\nLevel: Error" + "\nMessage: " + Error.LogFileDoesNotOpen + "\nPlace: " + GetPlace() + "\n")
 	}
