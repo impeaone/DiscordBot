@@ -17,7 +17,6 @@ import (
 	"time"
 )
 
-// TODO: реализовать базу данных(использование бота, ники сереги)
 func main() {
 	//Логи
 	logs := logger.NewLog()
