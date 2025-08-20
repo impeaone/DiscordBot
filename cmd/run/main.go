@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -72,6 +73,14 @@ func main() {
 		if m.Author.Bot {
 			return
 		}
+		//Если это личное сообщение
+		if isDirectMessage(s, m.ChannelID) {
+			_, err := s.ChannelMessageSend(m.ChannelID, Constants.TalksOnlyInServer+m.Author.Username)
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
+			return
+		}
 		// Диалог с духом без слеш-команды
 		if cmd.MessageForBot(m.Content) {
 			AiMessage, _ := AI.Promt(m.Author.GlobalName, m.Content, systemPromt, AIApi, RateLimiter)
@@ -85,6 +94,20 @@ func main() {
 	// Обработчик Slash-команд
 	dg.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		cmds := i.ApplicationCommandData()
+		//Если личное сообщение(нам такого не надо)
+		if isDirectMessage(s, i.ChannelID) {
+			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: Constants.TalksOnlyInServer + i.User.Username,
+				},
+			})
+			if err != nil {
+				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+			}
+			return
+		}
+		// Идем дальше если это сообщения с сервера
 		switch cmds.Name {
 		case "ping":
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -93,11 +116,11 @@ func main() {
 					Content: "Я обитаю независимо от твоего понимания. Ну вроде пишу тебе хуйню какую-то.",
 				},
 			})
-			databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
+				return
 			}
-
+			databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
 		case "you":
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -218,4 +241,29 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
+}
+
+// Код для определения, является ли сообщение сообщением из канала или это личное сообшение для бота
+// Этот бот работает только на сервере "не придумал"
+var (
+	dmCache    = make(map[string]bool) // Кеширование, чтобы быстрее потом работало
+	cacheMutex sync.Mutex
+)
+
+func isDirectMessage(s *discordgo.Session, channelID string) bool {
+	cacheMutex.Lock()
+	defer cacheMutex.Unlock()
+
+	if isDM, exists := dmCache[channelID]; exists {
+		return isDM
+	}
+
+	channel, err := s.Channel(channelID)
+	if err != nil {
+		return false
+	}
+
+	isDM := channel.Type == discordgo.ChannelTypeDM
+	dmCache[channelID] = isDM
+	return isDM
 }
