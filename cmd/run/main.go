@@ -83,7 +83,7 @@ func main() {
 		}
 		// Диалог с духом без слеш-команды
 		if cmd.MessageForBot(m.Content) {
-			AiMessage, _ := AI.Promt(m.Author.GlobalName, m.Content, systemPromt, AIApi, RateLimiter)
+			AiMessage, _ := AI.Promt(m.Author.Username, m.Content, systemPromt, AIApi, RateLimiter)
 			_, err := s.ChannelMessageSend(m.ChannelID, AiMessage)
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
