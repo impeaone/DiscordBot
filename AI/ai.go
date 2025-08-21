@@ -17,7 +17,6 @@ import (
 // promt - сообщение для ии
 // sysPromt - системное сообщение для бота
 // api - апи ключ для бота
-// TODO: делать для большинства логов константы ответов
 func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter, logs *logger.Log) (string, error) {
 	_, ok := ratelimiter.CheckLimit()
 	if !ok {
