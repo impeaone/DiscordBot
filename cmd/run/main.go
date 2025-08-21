@@ -13,7 +13,6 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 )
@@ -24,9 +23,18 @@ func main() {
 	// Объявляем RateLimiter для общения с духом
 	RateLimiter := cmd.NewSimpleRateLimiter("", time.Now()) // Для ИИ от спама, можно писать ИИ раз в 5 секунд
 	// Получаем никнеймы из txt
-	nicknames, _ := cmd.GetNicknames(Constants.PathToNicknamestxt, logs)
+	nicknames, errNicks := cmd.GetNicknames(Constants.PathToNicknamestxt, logs)
+	if errNicks != nil {
+		// Если файла нет, то и никнеймы менять нельзя будет, поэтому закрываем бота
+		logs.Error(Error.NicknamesFileDoesNotOpen+": "+errNicks.Error(), logger.GetPlace())
+		return
+	}
 	// Достаем системный промт
-	systemPromt, _ := AI.GetSystemPromt(Constants.PathToBotSystemtxt, logs)
+	systemPromt, errSysPromt := AI.GetSystemPromt(Constants.PathToBotSystemtxt, logs)
+	if errSysPromt != nil {
+		logs.Error(Error.SystemPromtFileDoesNotOpen+": "+errSysPromt.Error(), logger.GetPlace())
+		return
+	}
 	// Подключаемся к бд
 	db, err := databaseMethods.OpenDatabase(Constants.PathToDataBasetxt, logs)
 	if err != nil {
@@ -38,7 +46,6 @@ func main() {
 		sqldb, _ := db.DB()
 		sqldb.Close()
 	}()
-	_ = db
 	// Настраиваем переменные среды
 	AIApi := os.Getenv("AI_API_KEY")
 	if AIApi == "" {
@@ -51,12 +58,13 @@ func main() {
 		panic("DISCORD_BOT_TOKEN environment variable not set")
 	}
 	// Создаем сессию Discord
-	dg, err := discordgo.New("Bot " + botToken)
-	if err != nil {
-		logs.Error(Error.SessionError+"\n"+err.Error(), logger.GetPlace())
+	dg, errSession := cmd.StartBot(botToken, logs)
+	defer dg.Close()
+	if errSession != nil {
+		// внутри функции логи уже сделаны
 		return
 	}
-	// запуск функции, которая каждые два дня меняет никнеймы сереге
+	// запуск функции, которая каждые два часа меняет никнеймы сереге
 	go cmd.NicknamesChanger(dg, cmd.SergeyId, nicknames, db, logs)
 
 	// Обработчик события "готовности" бота
@@ -74,7 +82,7 @@ func main() {
 			return
 		}
 		//Если это личное сообщение
-		if isDirectMessage(s, m.ChannelID) {
+		if cmd.IsDirectMessage(s, m.ChannelID) {
 			_, err := s.ChannelMessageSend(m.ChannelID, Constants.TalksOnlyInServer+m.Author.Username)
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
@@ -83,7 +91,7 @@ func main() {
 		}
 		// Диалог с духом без слеш-команды
 		if cmd.MessageForBot(m.Content) {
-			AiMessage, _ := AI.Promt(m.Author.Username, m.Content, systemPromt, AIApi, RateLimiter)
+			AiMessage, _ := AI.Promt(m.Author.Username, m.Content, systemPromt, AIApi, RateLimiter, logs)
 			_, err := s.ChannelMessageSend(m.ChannelID, AiMessage)
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
@@ -95,7 +103,7 @@ func main() {
 	dg.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		cmds := i.ApplicationCommandData()
 		//Если личное сообщение(нам такого не надо)
-		if isDirectMessage(s, i.ChannelID) {
+		if cmd.IsDirectMessage(s, i.ChannelID) {
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
@@ -191,10 +199,10 @@ func main() {
 			// Асинхронно обрабатываем запрос
 			go func() {
 				message := cmds.Options[0].StringValue()
-				aiResponse, err := AI.Promt(i.Member.User.GlobalName, message, systemPromt, AIApi, RateLimiter)
-				if err != nil {
-					logs.Warning(err.Error(), logger.GetPlace())
-					aiResponse = "Все, Великий дух не хочет общаться"
+				aiResponse, errAi := AI.Promt(i.Member.User.GlobalName, message, systemPromt, AIApi, RateLimiter, logs)
+				if errAi != nil {
+					logs.Warning(Error.AiMessageError+": "+errAi.Error(), logger.GetPlace())
+					aiResponse = "Не хочу тебе отвечать, динаху"
 				}
 
 				// 3. Отправляем результат
@@ -204,7 +212,7 @@ func main() {
 				// заносим событие в базу данных
 				databaseMethods.DBNewAction(i.Member.User.Username, cmds.Name+" "+message, db, logs) // заносим событие в базу данных
 				if err != nil {
-					logs.Warning(err.Error(), logger.GetPlace())
+					logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 					return
 				}
 			}()
@@ -224,7 +232,7 @@ func main() {
 	// Открываем соединение
 	err = dg.Open()
 	if err != nil {
-		logs.Error(Error.SessionError+"\n"+err.Error(), logger.GetPlace())
+		logs.Error(Error.SessionError+": "+err.Error(), logger.GetPlace())
 		return
 	}
 	defer dg.Close()
@@ -235,35 +243,11 @@ func main() {
 		logs.Warning(Error.RegisteringCommandsError+": "+err.Error(), logger.GetPlace())
 		panic(Error.RegisteringCommandsError + ": " + err.Error())
 	}
+
 	log.Println("Зарегистрированные команды:", registeredCommands)
 	// Ждем сигнала завершения (Ctrl+C)
 	fmt.Println("Бот работает. Ctrl+C для выхода.")
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
-}
-
-// Код для определения, является ли сообщение сообщением из канала или это личное сообшение для бота
-// Этот бот работает только на сервере "не придумал"
-var (
-	dmCache    = make(map[string]bool) // Кеширование, чтобы быстрее потом работало
-	cacheMutex sync.Mutex
-)
-
-func isDirectMessage(s *discordgo.Session, channelID string) bool {
-	cacheMutex.Lock()
-	defer cacheMutex.Unlock()
-
-	if isDM, exists := dmCache[channelID]; exists {
-		return isDM
-	}
-
-	channel, err := s.Channel(channelID)
-	if err != nil {
-		return false
-	}
-
-	isDM := channel.Type == discordgo.ChannelTypeDM
-	dmCache[channelID] = isDM
-	return isDM
 }

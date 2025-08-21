@@ -42,13 +42,13 @@ func GetPlace() string {
 
 func WriteLogsToFile(LogText string) {
 	file, err := os.OpenFile(
-		"../Log.txt", os.O_RDWR, 0644)
+		"../Log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		log.Println("\nLevel: Error" + "\nMessage: " + Error.LogFileDoesNotOpen + "\nPlace: " + GetPlace() + "\n")
+		log.Println("\nLevel: Error" + "\nMessage: " + Error.LogFileDoesNotOpen + ": " + err.Error() + "\nPlace: " + GetPlace() + "\n")
 	}
 	_, err = file.WriteString(LogText + "\n\n")
 	if err != nil {
-		log.Println("\nLevel: Error" + "\nMessage: " + Error.LogFileDoesNotWrite + "\nPlace: " + GetPlace() + "\n")
+		log.Println("\nLevel: Error" + "\nMessage: " + Error.LogFileDoesNotWrite + ": " + err.Error() + "\nPlace: " + GetPlace() + "\n")
 	}
 	file.Close()
 }

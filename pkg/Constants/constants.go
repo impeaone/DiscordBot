@@ -9,3 +9,4 @@ var (
 )
 
 const TalksOnlyInServer = "Йоу, я отвечаю только на сервере 'не придумал', "
+const SessionSuccess = "Create session success"

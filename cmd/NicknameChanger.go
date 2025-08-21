@@ -17,6 +17,8 @@ const MyServerId = "537698381527777300"
 const SergeyId = "664192938460446730"
 const LastNicknameChanges = 3
 const TextChannelID = "904769583540486164"
+const HoursToChangeNickname = 2
+const HoursToCheckOfNicknameChanger = 1
 
 var (
 	lastExecution = time.Now() // для смены ника
@@ -30,7 +32,7 @@ func NicknamesChanger(s *discordgo.Session, UserId string, Nicknames []string, d
 			return
 		}
 		// Смотрим прошло ли 2 дня с момента смены ника
-		if time.Since(lastExecution).Hours() >= 36 {
+		if time.Since(lastExecution).Hours() >= HoursToChangeNickname {
 			lastExecution = time.Now()
 			// берем из базы данных три последних изменения ников
 			var nicks []databaseMethods.Nicknames
@@ -60,13 +62,13 @@ func NicknamesChanger(s *discordgo.Session, UserId string, Nicknames []string, d
 			}
 		}
 		// делаем перерыв
-		time.Sleep(4 * time.Hour)
+		time.Sleep(HoursToCheckOfNicknameChanger)
 	}
 }
 
 // GetNicknames - получает из txt файла никнеймы сереги
 func GetNicknames(path string, logs *logger.Log) ([]string, error) {
-	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		logs.Error("Nicknames File is not exist", logger.GetPlace())
 		return nil, err

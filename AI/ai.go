@@ -17,9 +17,11 @@ import (
 // promt - сообщение для ии
 // sysPromt - системное сообщение для бота
 // api - апи ключ для бота
-func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter) (string, error) {
+// TODO: делать для большинства логов константы ответов
+func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter, logs *logger.Log) (string, error) {
 	_, ok := ratelimiter.CheckLimit()
 	if !ok {
+		logs.Warning(user+" спамит боту!", logger.GetPlace())
 		return user + " не нужно на меня так наседать! Я не скорострел.", nil
 	}
 	ratelimiter.Unlock(user)
@@ -40,7 +42,7 @@ func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter
 
 	req, err := http.NewRequest("POST", url, payload)
 	if err != nil {
-		fmt.Println("Error creating request:", err)
+		logs.Error("Error creating request: "+err.Error(), logger.GetPlace())
 		return "error", err
 	}
 
@@ -50,24 +52,27 @@ func Promt(user, promt, sysPromt, api string, ratelimiter *cmd.SimpleRateLimiter
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Error making request:", err)
+		logs.Error("Error creating request: "+err.Error(), logger.GetPlace())
 		return "error", err
 	}
 	defer res.Body.Close()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Println("Error reading response:", err)
+		logs.Error("Error reading response: "+err.Error(), logger.GetPlace())
 		return "error", err
 	}
 	err = json.Unmarshal(body, &response)
 	if err != nil {
+		logs.Error("Ошибка чтения тела json ответа: "+err.Error(), logger.GetPlace())
 		return "Не хочу тебе отвечать, динаху", err
 	}
 	if response["choices"] == nil {
+		logs.Warning(user+" бота промтом ломает: ", logger.GetPlace())
 		return user + ", le le le динаху", nil
 	}
 	content := response["choices"].([]interface{})[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
+	logs.Info(user+" написал боту: "+promt, logger.GetPlace())
 	return content, nil
 }
 
