@@ -5,7 +5,6 @@ import (
 	"DiscordBot/pkg/logger/logger"
 	"github.com/bwmarrin/discordgo"
 	"gorm.io/gorm"
-	"io"
 	"math/rand"
 	"os"
 	"strings"
@@ -68,13 +67,10 @@ func NicknamesChanger(s *discordgo.Session, UserId string, Nicknames []string, d
 
 // GetNicknames - получает из txt файла никнеймы сереги
 func GetNicknames(path string, logs *logger.Log) ([]string, error) {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		logs.Error("Nicknames File is not exist", logger.GetPlace())
 		return nil, err
 	}
-	defer file.Close()
-	bytes, _ := io.ReadAll(file)
-	str := string(bytes)
-	return strings.Split(str, "\n"), nil
+	return strings.Split(string(file), "\n"), nil
 }

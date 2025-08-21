@@ -24,6 +24,10 @@ func main() {
 	RateLimiter := cmd.NewSimpleRateLimiter("", time.Now()) // Для ИИ от спама, можно писать ИИ раз в 5 секунд
 	// Получаем никнеймы из txt
 	nicknames, errNicks := cmd.GetNicknames(Constants.PathToNicknamestxt, logs)
+	if nicknames[0] == "" {
+		logs.Error(Error.NicknamesFileDoesNotOpen+": "+"файл пустой", logger.GetPlace())
+		return
+	}
 	if errNicks != nil {
 		// Если файла нет, то и никнеймы менять нельзя будет, поэтому закрываем бота
 		logs.Error(Error.NicknamesFileDoesNotOpen+": "+errNicks.Error(), logger.GetPlace())
