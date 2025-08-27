@@ -1,6 +1,6 @@
 ![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-#Discord Bot "Великий Дух"
+# Discord Bot "Великий Дух"
 
 Многофункциональный бот для Discord.  
 Великий дух сюжету разгневался на пользователя @porosyabiboss и теперь меняет ему никнеймы.  
@@ -12,8 +12,8 @@
 	/you  - бот немного расскажет о себе,  
 	/kara - основаная задача бота(для чего он был создан), эта команда меняет никнейм Сереге (вручную),  
 	/time - команда, которая просто выводит текущую дату и время,  
-	/talk - ai функция бота, тоесть диалог с ии.  
+	/talk - ai функция бота(ai-api), тоесть диалог с ии.  
 
 Раз в 3 часа этот дух меняет ник Сереге.  
-Также можно общатьтся с духом без команд, просто в чате написав его имя.  
-#Используемая библиотека для бота: github.com/bwmarrin/discordgo
+Также можно общатьтся с духом без команды /talk, просто в чате написав его имя.  
+# Используемая библиотека для бота: ![discordgo](https://github.com/bwmarrin/discordgo)
