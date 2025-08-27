@@ -132,7 +132,9 @@ func main() {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 				return
 			}
+			databaseMethods.DBMutex.Lock()
 			databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
+			databaseMethods.DBMutex.Unlock()
 		case "you":
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -140,7 +142,9 @@ func main() {
 					Content: "Я - великий дух сервера 'не придумал', я меняю ник сереге, потому что на него сошла моя кара.",
 				},
 			})
+			databaseMethods.DBMutex.Lock()
 			databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
+			databaseMethods.DBMutex.Unlock()
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 			}
@@ -168,8 +172,10 @@ func main() {
 						Content: fmt.Sprintf("Ник Сереги был изменен на `%s`", newNick),
 					},
 				})
+				databaseMethods.DBMutex.Lock()
 				databaseMethods.ChangeNickname(s, cmd.MyServerId, cmd.TextChannelID, userID, newNick, db, logs)
 				databaseMethods.DBNewAction(i.Interaction.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
+				databaseMethods.DBMutex.Unlock()
 				if err != nil {
 					logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 					return
@@ -184,13 +190,14 @@ func main() {
 					Content: "Время по великому духу: " + time.Now().Format("02.01.2006 15:04:05"),
 				},
 			})
+			databaseMethods.DBMutex.Lock()
 			databaseMethods.DBNewAction(i.Member.User.Username, cmds.Name, db, logs) // заносим событие в базу данных
+			databaseMethods.DBMutex.Unlock()
 			if err != nil {
 				logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 			}
 
 		case "talk":
-
 			// Немедленный отложенный ответ (В дискорде появляется сообщение, что бот думает, он ждет ответа)
 			err = s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseDeferredChannelMessageWithSource,
@@ -214,7 +221,9 @@ func main() {
 					Content: aiResponse,
 				})
 				// заносим событие в базу данных
+				databaseMethods.DBMutex.Lock()
 				databaseMethods.DBNewAction(i.Member.User.Username, cmds.Name+" "+message, db, logs) // заносим событие в базу данных
+				databaseMethods.DBMutex.Unlock()
 				if err != nil {
 					logs.Warning(Error.ChannelMessageError+"\n"+err.Error(), logger.GetPlace())
 					return

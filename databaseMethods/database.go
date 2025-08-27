@@ -5,7 +5,12 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"sync"
 	"time"
+)
+
+var (
+	DBMutex sync.Mutex
 )
 
 // Nicknames - таблица изменений никнеймов
