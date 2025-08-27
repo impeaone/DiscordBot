@@ -1,6 +1,6 @@
 ![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)
 ![Go](https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white)
-#Discord Bot "Великий Дух"
+# Discord Bot "Великий Дух"
 
 Многофункциональный бот для Discord.  
 Великий дух сюжету разгневался на пользователя @porosyabiboss и теперь меняет ему никнеймы.  
@@ -16,4 +16,4 @@
 
 Раз в 3 часа этот дух меняет ник Сереге.  
 Также можно общатьтся с духом без команд, просто в чате написав его имя.  
-#Используемая библиотека для бота: github.com/bwmarrin/discordgo
+# Используемая библиотека для бота: ![discordgo](https://github.com/bwmarrin/discordgo)
